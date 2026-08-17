@@ -1,0 +1,22 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Database
+*.db
+*.db-wal
+*.db-shm
+
+# Node / Vite
+node_modules/
+dist/
+.vite/
+
+# Env & editors
+.env
+.env.*
+.DS_Store
+.idea/

@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Linkspector — Broken Link &amp; Image Scanner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              ink: {
+                950: "#080b14",
+                900: "#0d1220",
+                800: "#141b2d",
+                700: "#1d2740",
+              },
+            },
+          },
+        },
+      };
+    </script>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body class="h-full bg-ink-950 text-slate-200 antialiased">
+    <div class="mx-auto flex min-h-full w-full max-w-7xl flex-col gap-8 px-5 py-8 sm:px-8">
+      <header class="flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <div
+            class="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-sky-400 to-indigo-500 text-lg font-black text-ink-950"
+          >
+            L
+          </div>
+          <div>
+            <h1 class="text-xl font-semibold tracking-tight text-white">Linkspector</h1>
+            <p class="text-sm text-slate-400">
+              Automated broken link &amp; image auditing for web creators
+            </p>
+          </div>
+        </div>
+        <a
+          href="/docs"
+          target="_blank"
+          rel="noreferrer"
+          class="rounded-lg border border-white/10 px-3 py-1.5 text-sm text-slate-300 transition hover:border-white/25 hover:text-white"
+          >API docs</a
+        >
+      </header>
+
+      <!-- Scan form -->
+      <section class="rounded-2xl border border-white/10 bg-ink-900/80 p-5 shadow-xl sm:p-6">
+        <form id="scan-form" class="flex flex-col gap-4" novalidate>
+          <div class="flex flex-col gap-3 sm:flex-row">
+            <div class="flex-1">
+              <label for="url-input" class="mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-400"
+                >Website URL</label
+              >
+              <input
+                id="url-input"
+                name="url"
+                type="text"
+                inputmode="url"
+                autocomplete="url"
+                placeholder="https://example.com"
+                class="w-full rounded-xl border border-white/10 bg-ink-800 px-4 py-3 text-slate-100 placeholder:text-slate-500 outline-none transition focus:border-sky-400/60 focus:ring-2 focus:ring-sky-500/20"
+              />
+            </div>
+            <div class="w-full sm:w-28">
+              <label for="depth-input" class="mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-400"
+                >Depth</label
+              >
+              <input
+                id="depth-input"
+                type="number"
+                min="0"
+                max="4"
+                value="2"
+                class="w-full rounded-xl border border-white/10 bg-ink-800 px-4 py-3 text-slate-100 outline-none transition focus:border-sky-400/60 focus:ring-2 focus:ring-sky-500/20"
+              />
+            </div>
+            <div class="w-full sm:w-32">
+              <label for="pages-input" class="mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-400"
+                >Max pages</label
+              >
+              <input
+                id="pages-input"
+                type="number"
+                min="1"
+                max="500"
+                value="50"
+                class="w-full rounded-xl border border-white/10 bg-ink-800 px-4 py-3 text-slate-100 outline-none transition focus:border-sky-400/60 focus:ring-2 focus:ring-sky-500/20"
+              />
+            </div>
+            <div class="flex items-end">
+              <button
+                id="scan-button"
+                type="submit"
+                class="w-full rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 px-6 py-3 font-semibold text-white shadow-lg shadow-sky-500/20 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+              >
+                Start Scan
+              </button>
+            </div>
+          </div>
+          <p id="form-error" class="hidden text-sm text-rose-400"></p>
+        </form>
+      </section>
+
+      <!-- Live status -->
+      <section id="status-panel" class="hidden rounded-2xl border border-white/10 bg-ink-900/60 p-5">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <span id="status-badge" class="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide"></span>
+            <span id="status-target" class="text-sm text-slate-300"></span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button
+              id="export-button"
+              type="button"
+              class="rounded-lg border border-emerald-400/30 bg-emerald-400/10 px-3 py-1.5 text-sm font-medium text-emerald-300 transition hover:bg-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-40"
+              disabled
+            >
+              Export CSV
+            </button>
+          </div>
+        </div>
+        <div class="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-white/5">
+          <div id="progress-bar" class="h-full w-0 rounded-full bg-gradient-to-r from-sky-400 to-indigo-400 transition-all duration-500"></div>
+        </div>
+        <p id="status-detail" class="mt-2 truncate text-xs text-slate-500"></p>
+      </section>
+
+      <!-- Metric cards -->
+      <section id="metrics" class="hidden grid grid-cols-2 gap-4 lg:grid-cols-4"></section>
+
+      <!-- Results -->
+      <section id="results" class="hidden flex-1 rounded-2xl border border-white/10 bg-ink-900/60">
+        <div class="flex flex-col gap-3 border-b border-white/10 p-5 lg:flex-row lg:items-center lg:justify-between">
+          <div id="filter-pills" class="flex flex-wrap gap-2"></div>
+          <div class="flex flex-wrap items-center gap-2">
+            <select
+              id="status-filter"
+              class="rounded-lg border border-white/10 bg-ink-800 px-3 py-2 text-sm text-slate-200 outline-none focus:border-sky-400/60"
+            >
+              <option value="all">All status codes</option>
+            </select>
+            <input
+              id="search-input"
+              type="search"
+              placeholder="Filter by URL…"
+              class="w-full rounded-lg border border-white/10 bg-ink-800 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500 outline-none focus:border-sky-400/60 sm:w-64"
+            />
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[860px] text-left text-sm">
+            <thead class="bg-white/[0.03] text-xs uppercase tracking-wide text-slate-400">
+              <tr>
+                <th class="px-5 py-3 font-medium">Source Page</th>
+                <th class="px-5 py-3 font-medium">Broken Resource / Target URL</th>
+                <th class="px-5 py-3 font-medium">Issue Type</th>
+                <th class="px-5 py-3 font-medium">Status</th>
+              </tr>
+            </thead>
+            <tbody id="results-body" class="divide-y divide-white/5"></tbody>
+          </table>
+        </div>
+        <div id="results-empty" class="hidden p-10 text-center text-sm text-slate-500"></div>
+        <div id="results-footer" class="border-t border-white/10 px-5 py-3 text-xs text-slate-500"></div>
+      </section>
+
+      <!-- Recent scans -->
+      <section id="history-section" class="hidden rounded-2xl border border-white/10 bg-ink-900/40 p-5">
+        <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">Recent scans</h2>
+        <ul id="history-list" class="flex flex-col gap-1.5 text-sm"></ul>
+      </section>
+
+      <footer class="pb-4 text-center text-xs text-slate-600">
+        Linkspector · FastAPI + Playwright + Vite
+      </footer>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
